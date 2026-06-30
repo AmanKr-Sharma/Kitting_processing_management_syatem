@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <script src="jsQR.js"></script>
+
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>Line 3 A KITTING</title>
+
+  <link rel="stylesheet" href="index.css" />
+
+  <script src="../uibuilder/vendor/socket.io/socket.io.js"></script>
+
+  <script src="./uibuilderfe.min.js"></script>
+
+
+  <script defer src="index.js"></script>
+</head>
+
+<body>
+
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="brand">
+      <img src="logo.png" alt="Logo" class="brand-mark" />
+      <h1>Line 3A Kitting Zone </h1>
+    </div>
+  </header>
+
+  <main class="container single-card">
+
+    <section class="card">
+
+      <header class="card-header">
+
+        <div class="card-title">
+          <span class="card-icon" aria-hidden="true">📊</span>
+          <h2>Kitting Status</h2>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+         <button class="btn btn-completed" id="completedBtn" onclick="openCompletedModal()">
+  Completed : <span id="todayCompletedCount">0</span>
+</button>
+          <button class="btn btn-primary" onclick="openKittingProcessModal()">
+            Kitting In Process
+          </button>
+        </div>
+
+      </header>
+
+      <div class="card-body">
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ASN No</th>
+              <th>Production Date</th>
+              <th>VC</th>
+              <th>Model</th>
+              <th style="width:10vw;">Color</th>
+              <th>Date Time</th>
+              <th>Start Time</th>
+              <th>End Time</th>
+              <th>Status</th>
+              <th class="actions-col">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody id="statusTbody">
+
+          </tbody>
+        </table>
+
+
+        <div class="pagination-controls">
+
+          <label>
+            Rows per page:
+            <select id="rowsPerPage">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+
+          <div id="pagination"></div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <footer class="footer">
+    <em>This system is developed and maintained by Central Maintenance</em>
+  </footer>
+
+
+  <div id="pleaseWait" class="overlay hidden" role="alert" aria-live="assertive">
+    <div class="overlay-content">
+      <div class="spinner" aria-hidden="true"></div>
+      <p id="waitPageDialogue">Sending command to devices…</p>
+    </div>
+  </div>
+
+
+  <div id="manualCompleteModal" class="modal hidden" role="dialog" aria-modal="true">
+
+    <div class="modal-content">
+
+      <header class="modal-header">
+        <h2>Manual Completion</h2>
+
+        <button id="closeModal"
+                class="btn btn-lite"
+                onclick="closeModal('manualCompleteModal')">
+          ✖
+        </button>
+      </header>
+
+      <div class="modal-body">
+
+        <div class="asn-display">
+          <strong>ASN No:</strong>
+          <span id="manualAsn"></span>
+        </div>
+
+        <label>
+          User ID
+          <input type="text"
+                 id="manualUserId"
+                 placeholder="Enter User ID" />
+        </label>
+
+        <label>
+          Password
+          <input type="password"
+                 id="manualPassword"
+                 placeholder="Enter Password" />
+        </label>
+
+      </div>
+
+      <footer class="modal-footer">
+        <button id="confirmManualComplete"
+                class="btn btn-primary"
+                onclick="confirmManualComplete()">
+          Confirm
+        </button>
+      </footer>
+
+    </div>
+  </div>
+
+  <div class="ks-overlay hidden" id="kittingModal">
+
+    <div class="ks-modal">
+
+      <div class="ks-header">
+        <h2>Kitting Summary</h2>
+
+        <button class="ks-close"
+                aria-label="Close"
+                onclick="closeModal('kittingModal')">
+          Close
+        </button>
+      </div>
+
+      <div class="ks-meta">
+        <span><strong>ASN:</strong> <span id="ks-asn">22-10-00491</span></span>
+        <span><strong>Color:</strong> <span id="ks-clr">13:22:07</span></span>
+        <span><strong>Line:</strong> <span id="ks-line">L3 ZA</span></span>
+      </div>
+
+      <div class="ks-body">
+
+        <div class="ks-chart">
+
+          <div class="donut-outer">
+
+            <div class="donut-inner">
+
+              <div class="donut-center">
+                <div class="donut-title">Total</div>
+                <div class="donut-value" id="ks-total">128</div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="ks-caption">Today · 06:00–14:00</div>
+
+          <div class="ks-legend">
+            <span><i class="dot dot-pass"></i>Blink Pass</span>
+            <span><i class="dot dot-fail"></i>Blink Fail</span>
+            <span><i class="dot dot-done"></i>Pick Done</span>
+            <span><i class="dot dot-pending"></i>Pick In Progress</span>
+            <span><i class="dot dot-notdone"></i>Pick Not Done</span>
+          </div>
+
+        </div>
+
+        <div class="ks-kpis">
+          <div class="kpi"><span>Blink — Pass</span><strong id="kpi-pass">76</strong></div>
+          <div class="kpi"><span>Blink — Fail</span><strong id="kpi-fail">12</strong></div>
+          <div class="kpi"><span>Pick — Done</span><strong id="kpi-done">32</strong></div>
+          <div class="kpi"><span>Pick — In Progress</span><strong id="kpi-inprog">4</strong></div>
+          <div class="kpi"><span>Pick — Not Done</span><strong id="kpi-notdone">4</strong></div>
+        </div>
+
+      </div>
+
+      <div class="ks-footer">
+        <button id="ks-viewAll" class="btn btn-viewDetails">
+          View all details
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="detailsModalOverlay" class="km-overlay"></div>
+
+  <div id="detailsModal"
+       class="km-modal"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="km-title">
+
+    <div class="km-header">
+
+      <div class="km-left">
+        <span class="km-label">ASN No. :</span>
+        <span id="km-asn" class="km-value">—</span>
+
+        <span class="km-label km-gap">Color :</span>
+
+        <span class="km-dot"
+              id="km-color-dot"
+              aria-hidden="true"></span>
+
+        <span id="km-color-name" class="km-value">—</span>
+      </div>
+
+      <div class="km-filter-bar"
+           style="padding:8px 16px; display:flex; align-items:center; gap:8px;">
+
+        <label for="statusFilter"
+               style="font-weight:600; color:#334155;">
+          Filter by Status:
+        </label>
+
+        <select id="statusFilter" class="km-select">
+          <option value="all">All</option>
+          <option value="0">Req not sent</option>
+          <option value="1">Req Sent</option>
+          <option value="2">Blink Failed</option>
+          <option value="3">Blink Success</option>
+          <option value="4">Pickup done</option>
+          <option value="5">Pickup not done</option>
+        </select>
+
+      </div>
+
+      <button class="km-close"
+              id="km-closeBtn"
+              type="button"
+              aria-label="Close"
+              onclick="closeMoreDetails()">
+
+        <span class="km-close-ico">❌</span>
+        Close
+      </button>
+
+    </div>
+
+    <div class="km-table-wrap">
+
+      <table class="km-table">
+
+        <thead>
+          <tr>
+            <th>Part No</th>
+            <th>Part Desc</th>
+            <th>Qty</th>
+            <th>Tag id</th>
+            <th>Mac id</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody id="km-tbody">
+        </tbody>
+
+      </table>
+
+    </div>
+  </div>
+
+  <div id="ledControlModal"
+       class="modal hidden"
+       role="dialog"
+       aria-modal="true">
+
+    <div class="modal-content" style="width:420px;">
+
+      <header class="modal-header">
+        <h2>LED Control</h2>
+
+        <button class="btn btn-lite"
+                onclick="closeModal('ledControlModal')">
+          ✖
+        </button>
+      </header>
+
+      <div class="modal-body">
+
+        <label>
+          Mac ID
+          <input type="text" id="led_tagid" readonly />
+        </label>
+
+        <label>
+          Pattern
+          <select id="led_pattern">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+        </label>
+
+        <label>
+          Power
+          <select id="led_power">
+            <option value="On">On</option>
+            <option value="Off">Off</option>
+          </select>
+        </label>
+
+        <label>
+          Color
+          <select id="led_color">
+            <option value="RED">RED</option>
+            <option value="GREEN">GREEN</option>
+            <option value="BLUE">BLUE</option>
+            <option value="MAGENTA">MAGENTA</option>
+            <option value="YELLOW">YELLOW</option>
+            <option value="CYAN">CYAN</option>
+            <option value="WHITE">WHITE</option>
+          </select>
+        </label>
+
+      </div>
+
+      <footer class="modal-footer">
+        <button class="btn btn-primary"
+                onclick="confirmLEDSettings()">
+          Apply
+        </button>
+      </footer>
+
+    </div>
+  </div>
+
+  <div id="qrModal" class="qr-modal" aria-hidden="true">
+
+    <div class="qr-modal__dialog"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="qrModalTitle">
+
+      <header class="qr-modal__header">
+
+        <h3 id="qrModalTitle">Scan QR Code</h3>
+
+        <button id="qrCloseBtn"
+                class="qr-modal__close"
+                aria-label="Close scanner">
+          &times;
+        </button>
+
+      </header>
+
+      <div class="qr-modal__body">
+
+        <video id="qrVideo" autoplay playsinline></video>
+
+        <canvas id="qrCanvas"
+                class="qr-canvas"
+                aria-hidden="true"></canvas>
+
+        <div id="qrOverlay" class="qr-overlay">
+          <div id="qrMessage">Point camera at QR code</div>
+        </div>
+
+      </div>
+
+      <footer class="qr-modal__footer">
+
+        <div class="qr-left">
+          <input type="text"
+                 id="manualQrCode"
+                 placeholder="Enter QR Manually" />
+
+          <button id="qrSubmitBtn"
+                  class="btn primary">
+            Manual Submit
+          </button>
+        </div>
+
+        <button id="qrCancelBtn" class="btn">
+          Cancel
+        </button>
+
+      </footer>
+
+    </div>
+  </div>
+<div id="kittingProcessModal"
+     class="modal hidden"
+     role="dialog"
+     aria-modal="true">
+
+  <div class="modal-content"
+       style="width:95%; max-width:1400px; max-height:90vh; overflow:auto;">
+
+    <header class="modal-header">
+
+      <h2>Kitting In Process</h2>
+
+      <button class="btn btn-lite"
+              onclick="closeModal('kittingProcessModal')">
+        ✖
+      </button>
+
+    </header>
+
+    <div class="modal-body">
+
+      <table class="table">
+
+        <thead>
+          <tr>
+            <th>ASN No</th>
+            <th>VC</th>
+            <th>Model</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+
+        <tbody id="kittingProcessBody">
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+</div>
+<div id="completedModal"
+     class="modal hidden"
+     role="dialog"
+     aria-modal="true">
+
+  <div class="modal-content"
+       style="width:95%; max-width:1400px; max-height:90vh; overflow:auto;">
+
+    <header class="modal-header">
+
+      <h2>Completed Kitting</h2>
+
+      <button class="btn btn-lite"
+              onclick="closeModal('completedModal')">
+        ✖
+      </button>
+
+    </header>
+
+    <div class="modal-body">
+
+      <table class="table">
+
+        <thead>
+          <tr>
+            <th>ASN No</th>
+            <th>VC</th>
+            <th>Model</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+
+        <tbody id="completedBody">
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+</div>
+  <!-- Toast -->
+  <div id="toast" style="display:block"></div>
+
+</body>
+</html>
